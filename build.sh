@@ -13,8 +13,9 @@
 #
 
 ARCH=arm64;
-CC=clang;
-LD=ld.lld
+CLANG_ROOT="$(pwd)/clang"
+CC="$CLANG_ROOT/bin/clang"
+LD="$CLANG_ROOT/bin/ld.lld"
 CLANG_TRIPLE=aarch64-linux-gnu-;
 CROSS_COMPILE=aarch64-linux-gnu-;
 CROSS_COMPILE_COMPAT=arm-linux-gnueabi-;

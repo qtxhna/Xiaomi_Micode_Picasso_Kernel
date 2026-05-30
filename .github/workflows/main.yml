@@ -9,15 +9,13 @@ jobs:
   build-kernel:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        include:
-          #- ksu_status: "with-KSU"
-          #  build_args: "all"
-          - ksu_status: "no-KSU"
-            build_args: "all"
+    env:
+      KSU_STATUS: "no-KSU"
+      BUILD_ARGS: "all"
+      AOSP_TOOLCHAIN_BRANCH: "android13"
+      AOSP_CLANG_VERSION: "r450784d"
 
-    name: Build (${{ matrix.ksu_status }})
+    name: Build (${{ env.KSU_STATUS }})
 
     steps:
     # 1. 拉取内核源码
@@ -27,87 +25,60 @@ jobs:
       #  submodules: 'recursive'
         fetch-depth: 1
 
-    # 2. 安装依赖
+    # 2. 安装依赖 (已移除 ccache)
     - name: Install Build Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
-          make curl zip unzip libxml2-utils gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-          ccache
+          make curl zip unzip libxml2-utils gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-    # 3. 下载 AOSP Clang
-    - name: Setup Specific Android Clang
-      run: |
-        echo "--------------------------------------------------"
-        echo " Cloning Clang 14.0.6 (r450784d) from Android13..."
-        echo "--------------------------------------------------"
-        git clone --depth=1 -b android13-release https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 $GITHUB_WORKSPACE/android-clang
-        if [ ! -d "$GITHUB_WORKSPACE/android-clang/clang-r450784d" ]; then
-          echo "Error: clang-r450784d not found in this branch!"
-          exit 1
-        fi
-
-    # 4. 配置并恢复 ccache 缓存
-    - name: Setup ccache
-      uses: actions/cache@v4
+    # 3. 缓存及下载 AOSP Clang (保留此加速拉取逻辑)
+    - name: 缓存Clang
+      id: cache-clang
+      uses: actions/cache/restore@main
       with:
-        path: ~/.ccache
-        # 移除 key 尾部的 sha，让它直接匹配最新的一次缓存，进一步提高恢复成功率
-        key: ${{ runner.os }}-ccache-${{ matrix.ksu_status }}-${{ github.run_id }}
-        restore-keys: |
-          ${{ runner.os }}-ccache-${{ matrix.ksu_status }}-
+        path: clang
+        key: clang-${{ env.AOSP_TOOLCHAIN_BRANCH }}-${{ env.AOSP_CLANG_VERSION }}
 
-    # 5. 创建 ccache 编译器伪装
-    - name: Create ccache Masquerade
+    - name: 下载Clang
+      id: download_clang
+      if: steps.cache-clang.outputs.cache-hit != 'true'
       run: |
-        mkdir -p $GITHUB_WORKSPACE/ccache-bin
-        ln -s /usr/bin/ccache $GITHUB_WORKSPACE/ccache-bin/clang
-        echo "$GITHUB_WORKSPACE/android-clang/clang-r450784d/bin" >> $GITHUB_PATH
-        echo "$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_PATH
+        mkdir -p clang
+        wget -c -t 10 "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ env.AOSP_TOOLCHAIN_BRANCH }}-release/clang-${{ env.AOSP_CLANG_VERSION }}.tar.gz" -O clang.tgz
+        tar -zxvf clang.tgz -C clang/
 
-    # 6. 执行脚本编译（注入终极优化环境变量）
+    - name: 保存Clang
+      if: always() && steps.cache-clang.outputs.cache-hit != 'true' && steps.download_clang.outcome == 'success'
+      uses: actions/cache/save@main
+      with:
+        path: clang
+        key: clang-${{ env.AOSP_TOOLCHAIN_BRANCH }}-${{ env.AOSP_CLANG_VERSION }}
+
+    # 4. 执行脚本编译 (已清理所有 ccache 相关的命令与环境变量)
     - name: Build Kernel via Script
       env:
         KBUILD_BUILD_USER: qtxhna
         KBUILD_BUILD_HOST: github-actions
-        CCACHE_DIR: "/home/runner/.ccache"
-        CCACHE_MAXSIZE: "5G"
-        
-        # 【核心修复 1】将绝对路径重映射为相对路径，防止因路径导致缓存失效
-      #  CCACHE_BASEDIR: ${{ github.workspace }}
-        
-        # 【核心修复 2】忽略源文件中的文件修改时间（mtime）差异，只关注代码内容本身
-      #  CCACHE_COMPILERCHECK: "%compiler% -v"
-        
-        # 【核心修复 3】优化内核编译中的预处理行为
-      #  CCACHE_SLOPPINESS: "file_macro,time_macros,include_file_mtime"
-        
       run: |
         chmod +x build.sh
-        
-        # 清除旧统计
-        ccache -z
-        
-        echo "Running build command: ./build.sh ${{ matrix.build_args }}"
-        ./build.sh ${{ matrix.build_args }}
-        
-        # 打印本次 ccache 命中率
-        ccache -s
+        echo "Running build command: ./build.sh ${{ env.BUILD_ARGS }}"
+        ./build.sh ${{ env.BUILD_ARGS }}
 
-    # 7. 准备打包产物
+    # 5. 准备打包产物
     - name: Prepare Artifact
       run: |
         mkdir -p ./output
         for file in ../out/AnyKernel3-picasso/Driftwood-Kernel-*.zip; do
           if [ -f "$file" ]; then
             base=$(basename "$file" .zip)
-            cp "$file" "./output/${base}-${{ matrix.ksu_status }}.zip"
+            cp "$file" "./output/${base}-${{ env.KSU_STATUS }}.zip"
           fi
         done
 
-    # 8. 上传编译好的 Zip 卡刷包
+    # 6. 上传编译好的 Zip 卡刷包
     - name: Upload Flashable Kernel
       uses: actions/upload-artifact@v4
       with:
-        name: Driftwood-Kernel-${{ matrix.ksu_status }}
+        name: Driftwood-Kernel-${{ env.KSU_STATUS }}
         path: ./output/Driftwood-Kernel-*.zip
