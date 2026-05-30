@@ -61,6 +61,12 @@ jobs:
         KBUILD_BUILD_USER: qtxhna
         KBUILD_BUILD_HOST: github-actions
       run: |
+        echo "$GITHUB_WORKSPACE/clang/bin" >> $GITHUB_PATH
+        echo "================ 工具链环境检查 ================"
+        echo "当前系统 PATH 路径: $PATH"
+        echo "当前默认的 clang 位置: $(which clang)"
+        echo "当前默认的 ld.lld 位置: $(which ld.lld)"
+        echo "------------------------------------------------"
         chmod +x build.sh
         echo "Running build command: ./build.sh ${{ env.BUILD_ARGS }}"
         ./build.sh ${{ env.BUILD_ARGS }}
