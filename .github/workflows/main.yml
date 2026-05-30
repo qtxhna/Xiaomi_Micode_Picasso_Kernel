@@ -15,7 +15,7 @@ jobs:
       AOSP_TOOLCHAIN_BRANCH: "android13"
       AOSP_CLANG_VERSION: "r450784d"
 
-    name: Build (${{ env.KSU_STATUS }})
+    name: Build (no-KSU)  # 【修复点】去掉了无法识别的 ${{ env.KSU_STATUS }}，直接写死名称
 
     steps:
     # 1. 拉取内核源码
@@ -25,14 +25,14 @@ jobs:
       #  submodules: 'recursive'
         fetch-depth: 1
 
-    # 2. 安装依赖 (已移除 ccache)
+    # 2. 安装依赖
     - name: Install Build Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
           make curl zip unzip libxml2-utils gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-    # 3. 缓存及下载 AOSP Clang (保留此加速拉取逻辑)
+    # 3. 缓存及下载 AOSP Clang
     - name: 缓存Clang
       id: cache-clang
       uses: actions/cache/restore@main
@@ -55,7 +55,7 @@ jobs:
         path: clang
         key: clang-${{ env.AOSP_TOOLCHAIN_BRANCH }}-${{ env.AOSP_CLANG_VERSION }}
 
-    # 4. 执行脚本编译 (已清理所有 ccache 相关的命令与环境变量)
+    # 4. 执行脚本编译
     - name: Build Kernel via Script
       env:
         KBUILD_BUILD_USER: qtxhna
