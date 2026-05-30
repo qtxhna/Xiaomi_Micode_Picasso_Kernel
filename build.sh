@@ -75,7 +75,8 @@ build_kernel(){
     STRIP=llvm-strip \
     CLANG_TRIPLE=aarch64-linux-gnu- \
     CROSS_COMPILE=aarch64-linux-gnu- \
-    CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
+    CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+    O=$OUT
     
     END_SEC=$(date +%s);
     COST_SEC=$[ $END_SEC-$START_SEC ];
