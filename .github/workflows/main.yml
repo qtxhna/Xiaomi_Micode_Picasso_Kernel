@@ -61,7 +61,7 @@ jobs:
         KBUILD_BUILD_USER: qtxhna
         KBUILD_BUILD_HOST: github-actions
       run: |
-        echo "$PATH:$GITHUB_WORKSPACE/clang/bin" > $PATH
+        export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
         echo "================ 工具链环境检查 ================"
         echo "当前系统 PATH 路径: $PATH"
         echo "当前默认的 clang 位置: $(which clang)"
