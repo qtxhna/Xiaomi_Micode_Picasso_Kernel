@@ -62,6 +62,7 @@ jobs:
         KBUILD_BUILD_HOST: github-actions
       run: |
         export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+        ln -sf /usr/bin/aarch64-linux-gnu-as "$GITHUB_WORKSPACE/clang/bin/as"
         echo "================ 工具链环境检查 ================"
         echo "当前系统 PATH 路径: $PATH"
         echo "当前默认的 clang 位置: $(which clang)"
