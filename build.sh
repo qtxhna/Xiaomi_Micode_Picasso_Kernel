@@ -29,7 +29,7 @@ TARGET_KERNEL_NAME=Driftwood-Kernel;
 
 DEFCONFIG_PATH=arch/arm64/configs
 DEFCONFIG_NAME=vendor/picasso_user_defconfig;
-DISABLE_KSU_FRAGMENT=vendor/disable_ksu.config;
+#DISABLE_KSU_FRAGMENT=vendor/disable_ksu.config;
 
 LOCAL_VERSION_NUMBER=$(cat $DEFCONFIG_PATH/$DEFCONFIG_NAME | grep CONFIG_LOCALVERSION= | cut -d = -f 2 | sed 's/"//g' | sed 's/-Driftwood-//g')
 TARGET_KERNEL_MOD_VERSION=$(make kernelversion)-$LOCAL_VERSION_NUMBER;
@@ -52,9 +52,9 @@ make_defconfig(){
     echo " Building Kernel Defconfig..";
     echo "------------------------------";
 
-    if [ $WITH_KERNELSU == 0 ]; then
-        DEFCONFIG_NAME="$DEFCONFIG_NAME $DISABLE_KSU_FRAGMENT"
-    fi
+    #if [ $WITH_KERNELSU == 0 ]; then
+    #    DEFCONFIG_NAME="$DEFCONFIG_NAME $DISABLE_KSU_FRAGMENT"
+    #fi
 
     make CC=$CC ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CROSS_COMPILE_COMPAT=$CROSS_COMPILE_COMPAT CLANG_TRIPLE=$CLANG_TRIPLE LLVM=1 LLVM_IAS=1 $CC_ADDITION_FLAGS O=$OUT -j$THREAD $DEFCONFIG_NAME;
 }

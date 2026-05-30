@@ -15,7 +15,7 @@ jobs:
           #- ksu_status: "with-KSU"
           #  build_args: "all"
           - ksu_status: "no-KSU"
-            build_args: "all noksu"
+            build_args: "all"
 
     name: Build (${{ matrix.ksu_status }})
 
